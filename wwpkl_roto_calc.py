@@ -69,8 +69,12 @@ def get_team_stats(url):
 
     stats = [team_name]
     for stat in team_stats:
-        if stat_ids[stat['stat_id']] != 'N/A' and stat_ids[stat['stat_id']] != 'IP':
-            stats.append(stat['value'])
+        id = stat_ids[stat['stat_id']]
+        if id != 'N/A' and id != 'IP':
+            if id in ['AVG', 'OPS', 'ERA', 'WHIP']:
+                stats.append(float(stat['value']))
+            else:
+                stats.append(int(stat['value']))
 
     return stats
 
@@ -81,15 +85,15 @@ def calculate_roto_standings(df):
 
     for stat in stat_names:
         key = str.format('{0}_rank', stat)
-
-        if key in ['L','ERA','WHIP']:
+        if stat in ['L', 'ERA', 'WHIP']:
             df[key] = df[stat].rank(ascending=False)
         else:
             df[key] = df[stat].rank()
 
-    df['Batting Total Rank'] = df[batting_ranks].sum(axis=1)
-    df['Pitching Total Rank'] = df[pitching_ranks].sum(axis=1)
-    df['Total Rank'] = df[['Batting Total Rank','Pitching Total Rank']].sum(axis=1)
+    for index, row in df.iterrows():
+        df.loc[index, 'Batting Total Rank'] = row[batting_ranks].sum()
+        df.loc[index, 'Pitching Total Rank'] = row[pitching_ranks].sum()
+        df.loc[index, 'Total Rank'] = row[batting_ranks].sum() + row[pitching_ranks].sum()
 
     final_df = df[['Team','R','H','HR','RBI','SB','AVG','OPS','Batting Total Rank','W','L','SV','SO','HLD','ERA','WHIP','Pitching Total Rank','Total Rank']]
     return final_df.sort_values(['Total Rank'],ascending=[0])
